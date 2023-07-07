@@ -98,11 +98,12 @@ async function save_url(URL){
     let random_key=await randomString()
     let is_exist=await LINKS.get(random_key)
     console.log(is_exist)
-    if (is_exist == null)
-        let ttl = await keyExpiredTtl(URL)
-        return await LINKS.put(random_key, URL,{expirationTtl: ttl}),random_key
-    else
-        save_url(URL)
+    if (is_exist == null){
+      let ttl = await keyExpiredTtl(URL)
+      return await LINKS.put(random_key, URL,{expirationTtl: ttl}),random_key
+    }else{
+      save_url(URL)
+    }
 }
 async function is_url_exist(url_sha512){
   let is_exist = await LINKS.get(url_sha512)
