@@ -9,6 +9,8 @@ const unique_link = typeof(UNIQUE_LINK)!="undefined" ? UNIQUE_LINK === 'true' : 
 
 const custom_link = typeof(CUSTOM_LINK)!="undefined" ? CUSTOM_LINK === 'true' : false
 
+const short_len = typeof(SHORT_LEN)!="undefined" ? parseInt(SHORT_LEN) : 6
+
 const safe_browsing_api_key = typeof(SAFE_BROWSING_API_KEY)!="undefined" ? SAFE_BROWSING_API_KEY : ""
 
 // 白名单中的域名无视超时，json数组格式，写顶级域名就可以，自动通过顶级域名和所有二级域名，
@@ -44,8 +46,8 @@ if (cors=="on"){
   }
 }
 
-async function randomString(len) {
-　　len = len || 6;
+async function randomString() {
+　　len = short_len;
 　　let $chars = 'ABCDEFGHJKMNPQRSTWXYZabcdefhijkmnprstwxyz2345678';    /****默认去掉了容易混淆的字符oOLl,9gq,Vv,Uu,I1****/
 　　let maxPos = $chars.length;
 　　let result = '';
