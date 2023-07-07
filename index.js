@@ -1,24 +1,42 @@
-const config = {
-no_ref: "off", //Control the HTTP referrer header, if you want to create an anonymous link that will hide the HTTP Referer header, please set to "on" .
-theme:"",//Homepage theme, use the empty value for default theme. To use urlcool theme, please fill with "theme/urlcool" .
-cors: "on",//Allow Cross-origin resource sharing for API requests.
-unique_link:true,//If it is true, the same long url will be shorten into the same short url
-custom_link:false,//Allow users to customize the short url.
-safe_browsing_api_key: "" //Enter Google Safe Browsing API Key to enable url safety check before redirect.
+//Control the HTTP referrer header, if you want to create an anonymous link that will hide the HTTP Referer header, please set to "on" .
+const no_ref = typeof(NO_REF)!="undefined" ? NO_REF : "off"
+
+//Allow Cross-origin resource sharing for API requests.
+const cors = typeof(CORS)!="undefined" ? CORS : "on"
+
+//If it is true, the same long url will be shorten into the same short url
+const unique_link = typeof(UNIQUE_LINK)!="undefined" ? UNIQUE_LINK === 'true' : true
+
+const custom_link = typeof(CUSTOM_LINK)!="undefined" ? CUSTOM_LINK === 'true' : false
+
+const safe_browsing_api_key = typeof(SAFE_BROWSING_API_KEY)!="undefined" ? SAFE_BROWSING_API_KEY : ""
+
+// 白名单中的域名无视超时，json数组格式，写顶级域名就可以，自动通过顶级域名和所有二级域名，
+const white_list = JSON.parse(typeof(WHITE_LIST)!="undefined" ? WHITE_LIST : `[]`)
+
+// 短链超时，单位秒
+const shorten_timeout = typeof(SHORTEN_TIMEOUT)!="undefined" ? parseInt(SHORTEN_TIMEOUT) : 86400
+if (shorten_timeout > 31536000) {
+  shorten_timeout = 31536000
+}
+
+// 白名单中短链超时，单位秒
+const white_timeoout = typeof(WHITE_TIMEOOUT)!="undefined" ? parseInt(WHITE_TIMEOOUT) : 31536000
+if (white_timeoout > 31536000) {
+  white_timeoout = 31536000
 }
 
 const html404 = `<!DOCTYPE html>
 <body>
   <h1>404 Not Found.</h1>
   <p>The url you visit is not found.</p>
-  <a href="https://github.com/xyTom/Url-Shorten-Worker/" target="_self">Fork me on GitHub</a>
 </body>`
 
 let response_header={
   "content-type": "text/html;charset=UTF-8",
 } 
 
-if (config.cors=="on"){
+if (cors=="on"){
   response_header={
   "content-type": "text/html;charset=UTF-8",
   "Access-Control-Allow-Origin":"*",
@@ -63,13 +81,26 @@ async function checkURL(URL){
     }else{
         return false;
     }
-} 
+}
+
+// 获取key需要被设置的过期时间
+async function keyExpiredTtl(url){
+  let host = new URL(url).host
+  let inWhite = white_list.some((h) => host == h || host.endsWith('.'+h))
+  if(inWhite){
+    return white_timeoout
+  }else{
+    return shorten_timeout
+  }
+}
+
 async function save_url(URL){
     let random_key=await randomString()
     let is_exist=await LINKS.get(random_key)
     console.log(is_exist)
     if (is_exist == null)
-        return await LINKS.put(random_key, URL),random_key
+        let ttl = await keyExpiredTtl(URL)
+        return await LINKS.put(random_key, URL,{expirationTtl: ttl}),random_key
     else
         save_url(URL)
 }
@@ -92,7 +123,7 @@ async function is_url_safe(url){
     redirect: 'follow'
   };
 
-  result = await fetch("https://safebrowsing.googleapis.com/v4/threatMatches:find?key="+config.safe_browsing_api_key, requestOptions)
+  result = await fetch("https://safebrowsing.googleapis.com/v4/threatMatches:find?key="+safe_browsing_api_key, requestOptions)
   result = await result.json()
   console.log(result)
   if (Object.keys(result).length === 0){
@@ -111,7 +142,7 @@ async function handleRequest(request) {
       headers: response_header,
     })}
     let stat,random_key
-    if (config.unique_link){
+    if (unique_link){
       let url_sha512 = await sha512(req["url"])
       let url_key = await is_url_exist(url_sha512)
       if(url_key){
@@ -119,7 +150,8 @@ async function handleRequest(request) {
       }else{
         stat,random_key=await save_url(req["url"])
         if (typeof(stat) == "undefined"){
-          console.log(await LINKS.put(url_sha512,random_key))
+          let ttl = await keyExpiredTtl(req["url"])
+          console.log(await LINKS.put(url_sha512,random_key,{expirationTtl: ttl}))
         }
       }
     }else{
@@ -148,7 +180,7 @@ async function handleRequest(request) {
   console.log(path)
   if(!path){
 
-    const html= await fetch("https://xytom.github.io/Url-Shorten-Worker/"+config.theme+"/index.html")
+    const html= await fetch("https://fastly.jsdelivr.net/gh/1Charlo/Url-Shorten-Worker/index.html")
     
     return new Response(await html.text(), {
     headers: {
@@ -169,9 +201,9 @@ async function handleRequest(request) {
   
 
   if (location) {
-    if (config.safe_browsing_api_key){
+    if (safe_browsing_api_key){
       if(!(await is_url_safe(location))){
-        let warning_page = await fetch("https://xytom.github.io/Url-Shorten-Worker/safe-browsing.html")
+        let warning_page = await fetch("https://fastly.jsdelivr.net/gh/1Charlo/Url-Shorten-Worker/safe-browsing.html")
         warning_page =await warning_page.text()
         warning_page = warning_page.replace(/{Replace}/gm, location)
         return new Response(warning_page, {
@@ -181,8 +213,8 @@ async function handleRequest(request) {
         })
       }
     }
-    if (config.no_ref=="on"){
-      let no_ref= await fetch("https://xytom.github.io/Url-Shorten-Worker/no-ref.html")
+    if (no_ref=="on"){
+      let no_ref= await fetch("https://fastly.jsdelivr.net/gh/1Charlo/Url-Shorten-Worker/no-ref.html")
       no_ref=await no_ref.text()
       no_ref=no_ref.replace(/{Replace}/gm, location)
       return new Response(no_ref, {

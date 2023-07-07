@@ -1,3 +1,6 @@
+## 感谢
+**Base on [xyTom/Url-Shorten-Worker](https://github.com/xyTom/Url-Shorten-Worker)**
+
 # Url-Shorten-Worker
 A URL Shortener created using Cloudflare Worker
 
@@ -24,7 +27,7 @@ Where Variable name should set as `LINKS` and KV namespace is the namespace you 
 
 ![](docs/worker_kv_binding.png)
 
-### 复制本项目中的`index.js`的代码到Cloudflare Worker 
+### 复制本项目中的`index.js`的代码到Cloudflare Worker
 
 Copy the `index.js` code from this project to Cloudflare Worker. 
 
