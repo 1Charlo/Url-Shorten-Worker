@@ -88,9 +88,9 @@ async function keyExpiredTtl(url){
   let host = new URL(url).host
   let inWhite = white_list.some((h) => host == h || host.endsWith('.'+h))
   if(inWhite){
-    return white_timeoout
+    return white_timeoout * 1000
   }else{
-    return shorten_timeout
+    return shorten_timeout * 1000
   }
 }
 
