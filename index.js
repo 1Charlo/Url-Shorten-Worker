@@ -174,7 +174,7 @@ async function handleRequest(request) {
   let hasUrl = false
   if (params) {
     urlParams = new URLSearchParams(params.split("?")[1])
-    hasUrl = await urlParams.has("url")
+    hasUrl = urlParams.has("url")
   }
 
   if (request.method === "POST" || (request.method === "GET" && !path && params && hasUrl)) {
@@ -184,7 +184,7 @@ async function handleRequest(request) {
       url = req["url"]
     }else{
       urlParams = new URLSearchParams(params.split("?")[1])
-      url = await urlParams.get("url")
+      url = urlParams.get("url")
     }
     
     console.log(url)
