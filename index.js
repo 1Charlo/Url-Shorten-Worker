@@ -147,15 +147,15 @@ async function ipFrequencyLimit(request) {
     let expir = timeStamp + 86400
     let value = expir.toString() + ',' + 1
     LINKS.put(ipKey, value, {expiration: expir})
-    return true
+    return false
   }else {
     let expir = parseInt(ipReqData.split(',')[0])
     let num = parseInt(ipReqData.split(',')[1])
     if (num > ip_req_day_limit) {
-      return false
+      return true
     }
     LINKS.put(ipKey, num+1, {expiration: expir})
-    return true
+    return false
   }
 }
 
