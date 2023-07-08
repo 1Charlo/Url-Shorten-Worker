@@ -141,6 +141,7 @@ async function handleRequest(request) {
   const requestURL = new URL(request.url)
   const path = requestURL.pathname.split("/")[1]
   const params = requestURL.search
+  const origin = requestURL.origin
   let hasUrl = false
   if (params) {
     urlParams = new URLSearchParams(params.split("?")[1])
@@ -180,7 +181,8 @@ async function handleRequest(request) {
     }
     console.log(stat)
     if (typeof(stat) == "undefined"){
-      return new Response(`{"status":200,"key":"/`+random_key+`"}`, {
+      short_key = origin + "/" + random_key
+      return new Response(`{"status":200,"key":"` + short_key + `"}`, {
       headers: response_header,
     })
     }else{
