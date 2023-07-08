@@ -85,14 +85,14 @@ async function checkURL(URL){
     }
 }
 
-// 获取key需要被设置的过期时间
+// 获取key需要被设置的过期时间(s)
 async function keyExpiredTtl(url){
   let host = new URL(url).host
   let inWhite = white_list.some((h) => host == h || host.endsWith('.'+h))
   if(inWhite){
-    return white_timeoout * 1000
+    return white_timeoout
   }else{
-    return shorten_timeout * 1000
+    return shorten_timeout
   }
 }
 
@@ -135,30 +135,48 @@ async function is_url_safe(url){
     return false
   }
 }
+
 async function handleRequest(request) {
   console.log(request)
-  if (request.method === "POST") {
-    let req=await request.json()
-    console.log(req["url"])
-    if(!await checkURL(req["url"])){
+  const requestURL = new URL(request.url)
+  const path = requestURL.pathname.split("/")[1]
+  const params = requestURL.search
+  let hasUrl = false
+  if (params) {
+    urlParams = new URLSearchParams(params.split("?")[1])
+    hasUrl = await urlParams.has("url")
+  }
+
+  if (request.method === "POST" || (request.method === "GET" && !path && params && hasUrl)) {
+    let url = '';
+    if (request.method === "POST"){
+      let req=await request.json()
+      url = req["url"]
+    }else{
+      urlParams = new URLSearchParams(params.split("?")[1])
+      url = await urlParams.get("url")
+    }
+    
+    console.log(url)
+    if(!await checkURL(url)){
     return new Response(`{"status":500,"key":": Error: Url illegal."}`, {
       headers: response_header,
     })}
     let stat,random_key
     if (unique_link){
-      let url_sha512 = await sha512(req["url"])
+      let url_sha512 = await sha512(url)
       let url_key = await is_url_exist(url_sha512)
       if(url_key){
         random_key = url_key
       }else{
-        stat,random_key=await save_url(req["url"])
+        stat,random_key=await save_url(url)
         if (typeof(stat) == "undefined"){
-          let ttl = await keyExpiredTtl(req["url"])
+          let ttl = await keyExpiredTtl(url)
           console.log(await LINKS.put(url_sha512,random_key,{expirationTtl: ttl}))
         }
       }
     }else{
-      stat,random_key=await save_url(req["url"])
+      stat,random_key=await save_url(url)
     }
     console.log(stat)
     if (typeof(stat) == "undefined"){
@@ -169,16 +187,12 @@ async function handleRequest(request) {
       return new Response(`{"status":200,"key":": Error:Reach the KV write limitation."}`, {
       headers: response_header,
     })}
-  }else if(request.method === "OPTIONS"){  
+  }else if(request.method === "OPTIONS"){
       return new Response(``, {
       headers: response_header,
     })
 
   }
-
-  const requestURL = new URL(request.url)
-  const path = requestURL.pathname.split("/")[1]
-  const params = requestURL.search;
 
   console.log(path)
   if(!path){
@@ -192,7 +206,7 @@ async function handleRequest(request) {
   })
   }
 
-  const value = await LINKS.get(path);
+  const value = await LINKS.get(path)
   let location ;
 
   if(params) {
