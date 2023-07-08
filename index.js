@@ -151,22 +151,17 @@ async function ipFrequencyLimit(request) {
   }else {
     let expir = parseInt(ipReqData.split(',')[0])
     let num = parseInt(ipReqData.split(',')[1])
-    if (num > ip_req_day_limit) {
+    if (num >= ip_req_day_limit) {
       return true
     }
-    LINKS.put(ipKey, num+1, {expiration: expir})
+    let value = expir.toString() + ',' + (num+1)
+    LINKS.put(ipKey, value, {expiration: expir})
     return false
   }
 }
 
 async function handleRequest(request) {
   console.log(request)
-  let ipLimit = await ipFrequencyLimit(request)
-  if (ipLimit) {
-    return new Response(`{"status":500,"key":": Error: ip is restricted."}`, {
-      headers: response_header,
-    })}
-  }
   const requestURL = new URL(request.url)
   const path = requestURL.pathname.split("/")[1]
   const params = requestURL.search
@@ -174,22 +169,31 @@ async function handleRequest(request) {
   let hasUrl = false
   if (params) {
     urlParams = new URLSearchParams(params.split("?")[1])
-    hasUrl = urlParams.has("url")
+    hasUrl = await urlParams.has("url")
   }
 
   if (request.method === "POST" || (request.method === "GET" && !path && params && hasUrl)) {
+
+    // 对ip的每日短链转换次数做限制
+    let ipLimit = await ipFrequencyLimit(request)
+    if (ipLimit) {
+      return new Response(`{"status":500,"key":"Error: ip is restricted."}`, {
+        headers: response_header,
+      })
+    }
+
     let url = '';
     if (request.method === "POST"){
       let req=await request.json()
       url = req["url"]
     }else{
       urlParams = new URLSearchParams(params.split("?")[1])
-      url = urlParams.get("url")
+      url = await urlParams.get("url")
     }
     
     console.log(url)
     if(!await checkURL(url)){
-    return new Response(`{"status":500,"key":": Error: Url illegal."}`, {
+    return new Response(`{"status":500,"key":"Error: Url illegal."}`, {
       headers: response_header,
     })}
     let stat,random_key
@@ -215,7 +219,7 @@ async function handleRequest(request) {
       headers: response_header,
     })
     }else{
-      return new Response(`{"status":200,"key":": Error:Reach the KV write limitation."}`, {
+      return new Response(`{"status":200,"key":"Error: Reach the KV write limitation."}`, {
       headers: response_header,
     })}
   }else if(request.method === "OPTIONS"){
