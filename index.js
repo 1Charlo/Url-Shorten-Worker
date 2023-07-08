@@ -28,6 +28,8 @@ if (white_timeoout > 31536000) {
   white_timeoout = 31536000
 }
 
+const ip_req_day_limit = typeof(IP_REQ_DAY_LIMIT)!="undefined" ? parseInt(IP_REQ_DAY_LIMIT) : 100
+
 const html404 = `<!DOCTYPE html>
 <body>
   <h1>404 Not Found.</h1>
@@ -136,8 +138,35 @@ async function is_url_safe(url){
   }
 }
 
+async function ipFrequencyLimit(request) {
+  let clientIP = request.headers.get("CF-Connecting-IP")
+  ipKey = clientIP.replaceAll(".", "-").replaceAll(":", "-")
+  ipReqData = await LINKS.get(ipKey)
+  const timeStamp = await Date.parse(new Date()) / 1000;
+  if (ipReqData == null) {
+    let expir = timeStamp + 86400
+    let value = expir.toString() + ',' + 1
+    LINKS.put(ipKey, value, {expiration: expir})
+    return true
+  }else {
+    let expir = parseInt(ipReqData.split(',')[0])
+    let num = parseInt(ipReqData.split(',')[1])
+    if (num > ip_req_day_limit) {
+      return false
+    }
+    LINKS.put(ipKey, num+1, {expiration: expir})
+    return true
+  }
+}
+
 async function handleRequest(request) {
   console.log(request)
+  let ipLimit = await ipFrequencyLimit(request)
+  if (ipLimit) {
+    return new Response(`{"status":500,"key":": Error: ip is restricted."}`, {
+      headers: response_header,
+    })}
+  }
   const requestURL = new URL(request.url)
   const path = requestURL.pathname.split("/")[1]
   const params = requestURL.search
