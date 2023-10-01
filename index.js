@@ -32,14 +32,6 @@ let response_header = {
     "content-type": "text/html;charset=UTF-8",
 }
 
-if (cors == "on") {
-    response_header = {
-        "content-type": "text/html;charset=UTF-8",
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "POST",
-    }
-}
-
 async function randomString() {
     let len = short_len;
     let $chars = 'ABCDEFGHJKMNPQRSTWXYZabcdefhijkmnprstwxyz2345678';    /****默认去掉了容易混淆的字符oOLl,9gq,Vv,Uu,I1****/
@@ -159,7 +151,7 @@ async function handleRequest(request) {
     const origin = requestURL.origin;
     let hasUrl = false;
     if (params) {
-        urlParams = new URLSearchParams(params.split("?")[1]);
+        let urlParams = new URLSearchParams(params.split("?")[1]);
         hasUrl = await urlParams.has("url");
     }
 
@@ -178,7 +170,7 @@ async function handleRequest(request) {
             let req = await request.json();
             url = req["url"];
         } else {
-            urlParams = new URLSearchParams(params.split("?")[1]);
+            let urlParams = new URLSearchParams(params.split("?")[1]);
             url = await urlParams.get("url");
         }
 
@@ -289,7 +281,13 @@ function getEnvs(env) {
 
     //Allow Cross-origin resource sharing for API requests.
     cors = typeof (env.CORS) != "undefined" ? env.CORS : "on";
-
+    if (cors == "on") {
+        response_header = {
+            "content-type": "text/html;charset=UTF-8",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST",
+        }
+    }
     //If it is true, the same long url will be shorten into the same short url
     unique_link = typeof (env.UNIQUE_LINK) != "undefined" ? env.UNIQUE_LINK === 'true' : true;
 
